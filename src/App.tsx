@@ -1,9 +1,12 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { Stage, Layer, Image, Circle } from "react-konva";
 import Konva from "konva";
 import "./App.css";
-import { Button } from "@mui/material";
+import { Button, Paper, Typography, Box } from "@mui/material";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import ExportModal from "./components/ExportModal";
+import WelcomeScreen from "./components/WelcomeScreen";
+import { FileWithPath, useDropzone } from "react-dropzone";
 
 interface ColorSpot {
   x: number;
@@ -20,29 +23,40 @@ function App() {
   const stageRef = useRef<Konva.Stage>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new window.Image();
-        img.onload = () => {
-          const { width, height } = img;
-          const scale = Math.min(
-            (window.innerWidth * 0.8) / width,
-            (window.innerHeight * 0.8) / height
-          );
-          setImage(img);
-          setImageSize({ width, height });
-          setColorSpots([]);
-          setStageScale(scale);
-          setStagePosition({ x: 0, y: 0 });
-        };
-        img.src = e.target?.result as string;
+  const handleImageUpload = useCallback((acceptedFiles: FileWithPath[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const { width, height } = img;
+        const scale = Math.min(
+          (window.innerWidth * 0.8) / width,
+          (window.innerHeight * 0.8) / height
+        );
+        setImage(img);
+        setImageSize({ width, height });
+        setColorSpots([]);
+        setStageScale(scale);
+        setStagePosition({ x: 0, y: 0 });
       };
-      reader.readAsDataURL(file);
-    }
-  };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const onDrop = useCallback((acceptedFiles: FileWithPath[]) => {
+    handleImageUpload(acceptedFiles);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { "image/*": [] },
+    multiple: false,
+    noClick: true,
+  });
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!image) return;
@@ -212,28 +226,45 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div className="App" {...getRootProps()}>
+      <input {...getInputProps()} />
       {!image ? (
-        <div className="welcome-screen">
-          <h1>Welcome to Color Palette Creator</h1>
-          <p>Create custom color palettes from your favorite images!</p>
-          <ul>
-            <li>Upload an image to get started</li>
-            <li>Click on the image to select colors</li>
-            <li>Zoom in and out for precise color picking</li>
-            <li>Export your palette when you're done</li>
-          </ul>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            id="image-upload"
-            style={{ display: "none" }}
+        isDragActive ? (
+          <Paper
+            elevation={3}
+            sx={{
+              p: 5,
+              backgroundColor: "rgba(0, 0, 0, 0.04)",
+              border: "2px dashed #2196f3",
+              borderRadius: 2,
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "background-color 0.3s",
+              "&:hover": {
+                backgroundColor: "rgba(0, 0, 0, 0.08)",
+              },
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <CloudUploadIcon sx={{ fontSize: 48, color: "#2196f3" }} />
+              <Typography variant="h6" color="primary">
+                Drop the image here ...
+              </Typography>
+            </Box>
+          </Paper>
+        ) : (
+          <WelcomeScreen
+            onImageUpload={handleImageUpload}
+            isImageLoaded={false}
           />
-          <label htmlFor="image-upload" className="upload-button">
-            Upload an Image
-          </label>
-        </div>
+        )
       ) : (
         <>
           <Stage
