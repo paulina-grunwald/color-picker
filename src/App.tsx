@@ -155,25 +155,38 @@ function App() {
   const exportColorPalette = () => {
     if (colorSpots.length === 0) return;
 
+    // Filter unique colors
+    const uniqueColors = Array.from(
+      new Set(colorSpots.map((spot) => spot.color))
+    );
+
     const canvas = document.createElement("canvas");
-    const canvasWidth = 1000;
-    const canvasHeight = 200;
+    const colorsPerRow = 5;
+    const rows = Math.ceil(uniqueColors.length / colorsPerRow);
+    const spotWidth = 600;
+    const spotHeight = 300;
+    const canvasWidth = spotWidth * colorsPerRow;
+    const canvasHeight = spotHeight * rows;
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
     const ctx = canvas.getContext("2d");
 
     if (ctx) {
-      const spotWidth = canvasWidth / colorSpots.length;
+      uniqueColors.forEach((color, index) => {
+        const row = Math.floor(index / colorsPerRow);
+        const col = index % colorsPerRow;
+        const x = col * spotWidth;
+        const y = row * spotHeight;
 
-      colorSpots.forEach((spot, index) => {
-        ctx.fillStyle = spot.color;
-        ctx.fillRect(index * spotWidth, 0, spotWidth, canvasHeight);
+        // Fill color rectangle
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, spotWidth, spotHeight);
 
         // Add color hex code
-        ctx.fillStyle = getContrastColor(spot.color);
-        ctx.font = "bold 16px Arial";
+        ctx.fillStyle = getContrastColor(color);
+        ctx.font = "bold 36px Arial";
         ctx.textAlign = "center";
-        ctx.fillText(spot.color, (index + 0.5) * spotWidth, canvasHeight - 20);
+        ctx.fillText(color, x + spotWidth / 2, y + spotHeight - 30);
       });
 
       // Convert canvas to image and trigger download
